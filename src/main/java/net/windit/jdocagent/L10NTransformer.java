@@ -15,12 +15,12 @@ import java.util.Properties;
 
 public class L10NTransformer implements ClassFileTransformer {
 
-    private static final String[] docletsPatch = {"jdk.javadoc.internal.doclets.toolkit.resources.doclets_zh_CN", System.getenv("L10N_DOCLETS_PATCH_FILE")};
-    private static final String[] standardPatch = {"jdk.javadoc.internal.doclets.formats.html.resources.standard_zh_CN", System.getenv("L10N_STANDARD_PATCH_FILE")};
+    public static final String[] docletsPatch = {"jdk.javadoc.internal.doclets.toolkit.resources.doclets_zh_CN", System.getenv("L10N_DOCLETS_PATCH_FILE")};
+    public static final String[] standardPatch = {"jdk.javadoc.internal.doclets.formats.html.resources.standard_zh_CN", System.getenv("L10N_STANDARD_PATCH_FILE")};
 
     private static final String insertCode = """
             {
-                $_ = net.windit.jdocagent.L10NTransformer.addPatchEntries($_, "%s");
+                $_ = net.windit.jdocagent.L10NTransformer.addPatchEntries($_, %s);
             }
             """;
 
@@ -28,13 +28,16 @@ public class L10NTransformer implements ClassFileTransformer {
     public byte[] transform(ClassLoader loader, String name, Class<?> classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
         name = name.replace("/", ".");
         if (name.equals(docletsPatch[0]) || name.equals(standardPatch[0])) {
-            String filename;
+            String patchFileNameField;
+            String patchFileName;
             if (name.equals(docletsPatch[0])) {
-                filename = docletsPatch[1];
+                patchFileNameField = "net.windit.jdocagent.L10NTransformer.docletsPatch[1]";
+                patchFileName = docletsPatch[1];
             } else {
-                filename = standardPatch[1];
+                patchFileNameField = "net.windit.jdocagent.L10NTransformer.standardPatch[1]";
+                patchFileName = standardPatch[1];
             }
-            if (filename == null) {
+            if (patchFileName == null) {
                 return null;
             }
             System.out.println("------------------------");
@@ -42,7 +45,7 @@ public class L10NTransformer implements ClassFileTransformer {
             try {
                 var clazz = ClassPool.getDefault().get(name);
                 var method = clazz.getDeclaredMethod("getContents");
-                method.insertAfter(String.format(insertCode, filename));
+                method.insertAfter(String.format(insertCode, patchFileNameField));
                 System.out.println("transform done");
                 System.out.println("------------------------");
                 return clazz.toBytecode();
